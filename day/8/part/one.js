@@ -1,7 +1,9 @@
 const fs = require("fs");
 
 const raw = fs.readFileSync("../input.txt").toString();
-const forest = raw.split("\n").map((row) => row.split("").map((height) => Number(height)));
+const forest = raw
+  .split("\n")
+  .map((row) => row.split("").map((height) => Number(height)));
 
 const MAX_HEIGHT = 9;
 const foundTrees = {};
@@ -29,7 +31,7 @@ for (let y = 0; y < forest.length; y++) {
 }
 
 // right to left
-for (let y = 0; y <= forest.length -1; y++) {
+for (let y = 0; y <= forest.length - 1; y++) {
   let currentMax = -1;
   for (let x = forest[y].length - 1; x >= 0; x--) {
     const height = forest[y][x];

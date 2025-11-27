@@ -1,7 +1,9 @@
 const fs = require("fs");
 
 const raw = fs.readFileSync("../input.txt").toString();
-const forest = raw.split("\n").map((row) => row.split("").map((height) => Number(height)));
+const forest = raw
+  .split("\n")
+  .map((row) => row.split("").map((height) => Number(height)));
 
 const traverse = (startX, startY) => {
   const initialHeight = forest[startY][startX];
@@ -30,7 +32,7 @@ const traverse = (startX, startY) => {
 
   // top to bottom
   let bottomDistance = 0;
-  
+
   for (let y = startY + 1; y <= forest.length - 1; y++) {
     const currentHeight = forest[y][startX];
     bottomDistance++;
@@ -58,7 +60,7 @@ const findBestView = () => {
   let maxScenicScore = 0;
 
   for (let y = 0; y < forest.length; y++) {
-    for (let x  = 0; x < forest[y].length; x++) {
+    for (let x = 0; x < forest[y].length; x++) {
       const currentScenicScore = traverse(x, y);
       if (currentScenicScore > maxScenicScore) {
         maxScenicScore = currentScenicScore;
@@ -67,6 +69,6 @@ const findBestView = () => {
   }
 
   return maxScenicScore;
-}
+};
 
 console.log(findBestView());
