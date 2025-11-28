@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const raw = fs.readFileSync("../input.txt").toString();
+const raw = fs.readFileSync(__dirname + "/../input.txt").toString();
 const forest = raw
   .split("\n")
   .map((row) => row.split("").map((height) => Number(height)));
