@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Pure JS Graph Visualizer</title>
+    <style>
+      :root {
+        --bg: #0f1724;
+        --panel: rgba(255, 255, 255, 0.04);
+        --muted: #9aa6bf;
+        --accent: #60a5fa;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI,
+          Roboto, "Helvetica Neue", Arial;
+      }
+      body {
+        background: linear-gradient(180deg, #071025 0%, #0b1320 100%);
+        color: #e6eef8;
+        display: flex;
+        gap: 12px;
+        padding: 14px;
+        box-sizing: border-box;
+      }
+      canvas {
+        border-radius: 10px;
+        background: linear-gradient(180deg, #071225, #071529);
+        box-shadow: 0 8px 30px rgba(2, 6, 23, 0.8);
+        flex: 1;
+        display: block;
+        max-height: calc(100vh - 28px);
+      }
+      #panel {
+        width: 320px;
+        min-width: 220px;
+        max-height: calc(100vh - 28px);
+        background: var(--panel);
+        padding: 14px;
+        border-radius: 10px;
+        box-shadow: 0 6px 20px rgba(2, 6, 23, 0.6);
+        overflow: auto;
+      }
+      h1 {
+        margin: 0 0 10px 0;
+        font-size: 18px;
+      }
+      .muted {
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 10px;
+      }
+      .controls {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+      }
+      button {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        color: var(--muted);
+        padding: 8px 10px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 13px;
+      }
+      button:hover {
+        border-color: rgba(255, 255, 255, 0.12);
+        color: #fff;
+      }
+      .legend {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        margin-top: 8px;
+      }
+      .legend .item {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 13px;
+        color: var(--muted);
+      }
+      .dot {
+        width: 14px;
+        height: 14px;
+        border-radius: 3px;
+      }
+      .footer {
+        margin-top: 12px;
+        font-size: 12px;
+        color: var(--muted);
+      }
+      #node-info {
+        margin-top: 12px;
+        background: rgba(255, 255, 255, 0.02);
+        padding: 10px;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+      a.small {
+        color: var(--accent);
+        text-decoration: none;
+      }
+      .tip {
+        position: fixed;
+        pointer-events: none;
+        transform: translate(-50%, -120%);
+        padding: 8px 10px;
+        border-radius: 6px;
+        background: rgba(3, 6, 12, 0.9);
+        color: #eaf2ff;
+        font-size: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.04);
+        white-space: nowrap;
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="c" width="1200" height="800"></canvas>
+
+    <div id="panel">
+      <h1>Graph Visualizer (Pure JS)</h1>
+      <div class="muted">
+        Interactive force-directed layout. Click a node to toggle
+        <code>isOpen</code>. Drag nodes to reposition.
+      </div>
+      <div class="controls">
+        <button id="reset">Reset Layout</button>
+        <button id="randomize">Randomize Positions</button>
+        <button id="pause">Pause</button>
+        <button id="labels">Toggle Labels</button>
+      </div>
+
+      <div class="legend">
+        <div class="item">
+          <div class="dot" style="background: #2dd4bf"></div>
+          open node
+        </div>
+        <div class="item">
+          <div class="dot" style="background: #60a5fa"></div>
+          closed node
+        </div>
+        <div class="item">
+          <div
+            style="
+              width: 28px;
+              height: 4px;
+              background: #95a5ff;
+              border-radius: 2px;
+            "
+          ></div>
+          connection
+        </div>
+      </div>
+
+      <div id="node-info">
+        <strong>Selected node:</strong>
+        <div id="selected">None</div>
+      </div>
+
+      <div class="footer">
+        Example input format: plain object mapping IDs to { rate, connections,
+        isOpen }.
+        <br /><br />
+        <em>Note:</em> if `rate` is an array we use the first element.
+      </div>
+    </div>
+
+    <div id="tooltip" class="tip" style="display: none"></div>
+
+    <script>
+      /* ---------------------------
+         Example data (your input)
+         --------------------------- */
+      const DATA = {
+        UU: {
+          rate: 24,
+          connections: ["MO", "FW", "LQ"],
+          isOpen: false,
+        },
+        EW: {
+          rate: 16,
+          connections: ["YZ", "JK", "SG"],
+          isOpen: false,
+        },
+        RQ: { rate: 0, connections: ["ER", "ZI"], isOpen: false },
+        WJ: { rate: 25, connections: ["XP"], isOpen: false },
+        OZ: {
+          rate: 17,
+          connections: ["UB", "HK", "JM", "ZK", "ER"],
+          isOpen: false,
+        },
+        ZM: { rate: 23, connections: ["GB"], isOpen: false },
+        BE: { rate: 0, connections: ["AA", "MJ"], isOpen: false },
+        YZ: { rate: 0, connections: ["KC", "EW"], isOpen: false },
+        JX: { rate: 0, connections: ["WH", "KI"], isOpen: false },
+        QC: { rate: 0, connections: ["MJ", "DW"], isOpen: false },
+        RU: { rate: 14, connections: ["SU"], isOpen: false },
+        NI: { rate: 0, connections: ["AA", "WH"], isOpen: false },
+        XP: { rate: 0, connections: ["WJ", "TM"], isOpen: false },
+        FW: { rate: 0, connections: ["UU", "VO"], isOpen: false },
+        TM: { rate: 0, connections: ["PL", "XP"], isOpen: false },
+        KJ: { rate: 0, connections: ["MJ", "CO"], isOpen: false },
+        LQ: { rate: 0, connections: ["UU", "PE"], isOpen: false },
+        PE: { rate: 0, connections: ["YJ", "LQ"], isOpen: false },
+        WH: {
+          rate: 11,
+          connections: ["HK", "JX", "EZ", "ZU", "NI"],
+          isOpen: false,
+        },
+        ZB: { rate: 0, connections: ["AA", "AC"], isOpen: false },
+        GA: { rate: 0, connections: ["AA", "CO"], isOpen: false },
+        NH: { rate: 0, connections: ["ZU", "MJ"], isOpen: false },
+        SG: { rate: 0, connections: ["PY", "EW"], isOpen: false },
+        MJ: {
+          rate: 6,
+          connections: ["KJ", "BE", "QC", "NH", "EE"],
+          isOpen: false,
+        },
+        QX: { rate: 0, connections: ["UD", "PL"], isOpen: false },
+        ZK: { rate: 0, connections: ["FD", "OZ"], isOpen: false },
+        GB: { rate: 0, connections: ["ZM", "FD"], isOpen: false },
+        ZU: { rate: 0, connections: ["NH", "WH"], isOpen: false },
+        MO: { rate: 0, connections: ["ZI", "UU"], isOpen: false },
+        KI: { rate: 0, connections: ["DW", "JX"], isOpen: false },
+        UD: {
+          rate: 19,
+          connections: ["VO", "PY", "QX"],
+          isOpen: false,
+        },
+        VO: { rate: 0, connections: ["UD", "FW"], isOpen: false },
+        PM: { rate: 0, connections: ["YF", "FD"], isOpen: false },
+        FD: {
+          rate: 21,
+          connections: ["ZK", "PM", "GB"],
+          isOpen: false,
+        },
+        NQ: { rate: 0, connections: ["SU", "DW"], isOpen: false },
+        YF: { rate: 0, connections: ["ZI", "PM"], isOpen: false },
+        CO: {
+          rate: 18,
+          connections: ["GA", "KJ", "EZ"],
+          isOpen: false,
+        },
+        DW: {
+          rate: 10,
+          connections: ["NQ", "QC", "KI", "JK", "HX"],
+          isOpen: false,
+        },
+        PL: {
+          rate: 22,
+          connections: ["KC", "TM", "QX"],
+          isOpen: false,
+        },
+        AC: { rate: 0, connections: ["ZB", "YJ"], isOpen: false },
+        YJ: {
+          rate: 15,
+          connections: ["OC", "PE", "AC"],
+          isOpen: false,
+        },
+        SU: { rate: 0, connections: ["NQ", "RU"], isOpen: false },
+        ZI: {
+          rate: 20,
+          connections: ["YF", "RQ", "MO"],
+          isOpen: false,
+        },
+        EZ: { rate: 0, connections: ["WH", "CO"], isOpen: false },
+        HX: { rate: 0, connections: ["AA", "DW"], isOpen: false },
+        EE: { rate: 0, connections: ["JM", "MJ"], isOpen: false },
+        KC: { rate: 0, connections: ["YZ", "PL"], isOpen: false },
+        AA: {
+          rate: 0,
+          connections: ["ZB", "BE", "NI", "HX", "GA"],
+          isOpen: false,
+        },
+        UB: { rate: 0, connections: ["OC", "OZ"], isOpen: false },
+        HK: { rate: 0, connections: ["OZ", "WH"], isOpen: false },
+        PY: { rate: 0, connections: ["UD", "SG"], isOpen: false },
+        JK: { rate: 0, connections: ["EW", "DW"], isOpen: false },
+        OC: { rate: 0, connections: ["YJ", "UB"], isOpen: false },
+        ER: { rate: 0, connections: ["RQ", "OZ"], isOpen: false },
+        JM: { rate: 0, connections: ["OZ", "EE"], isOpen: false },
+      };
+
+      /* ---------------------------
+         Build nodes & links
+         --------------------------- */
+      function buildGraph(raw) {
+        const nodes = [];
+        const nodeMap = new Map();
+        // get rates robustly (if rate is array or number)
+        for (const id of Object.keys(raw)) {
+          const r = raw[id].rate;
+          const rate = Array.isArray(r)
+            ? r[0] || 0
+            : typeof r === "number"
+            ? r
+            : 0;
+          const node = {
+            id,
+            rate,
+            isOpen: Boolean(raw[id].isOpen),
+            x: Math.random() * 600 + 300,
+            y: Math.random() * 300 + 200,
+            vx: 0,
+            vy: 0,
+            fx: 0,
+            fy: 0, // forces accum
+            fixed: false,
+          };
+          nodes.push(node);
+          nodeMap.set(id, node);
+        }
+        const links = [];
+        // create undirected links without duplicates
+        const seen = new Set();
+        for (const id of Object.keys(raw)) {
+          const conns = raw[id].connections || [];
+          for (const to of conns) {
+            const key = id < to ? id + "|" + to : to + "|" + id;
+            if (!nodeMap.has(to)) continue;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            links.push({ source: nodeMap.get(id), target: nodeMap.get(to) });
+          }
+        }
+        return { nodes, links };
+      }
+
+      /* ---------------------------
+         Canvas + drawing + sim
+         --------------------------- */
+      const canvas = document.getElementById("c");
+      const ctx = canvas.getContext("2d");
+      let W = canvas.width,
+        H = canvas.height;
+      function resize() {
+        // adapt to container size while preserving pixel ratio
+        const rect = canvas.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+        canvas.width = Math.max(300, Math.floor(rect.width * dpr));
+        canvas.height = Math.max(200, Math.floor(rect.height * dpr));
+        canvas.style.width = rect.width + "px";
+        canvas.style.height = rect.height + "px";
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        W = rect.width;
+        H = rect.height;
+      }
+      window.addEventListener("resize", resize);
+      resize();
+
+      const graph = buildGraph(DATA);
+      let showLabels = true;
+      let running = true;
+
+      /* simulation parameters */
+      const params = {
+        charge: -2500, // repulsion strength
+        linkDistance: 120, // ideal link distance
+        linkStrength: 0.1, // spring strength
+        centering: 0.01, // pull to center
+        friction: 0.92, // damping
+        dt: 0.016, // timestep approximation
+      };
+
+      /* node visual scale: map rate -> radius */
+      function rateToRadius(rate) {
+        const base = 10;
+        // spread rates a bit using sqrt
+        return base + Math.sqrt(Math.max(0, rate)) * 3;
+      }
+
+      /* simple force-directed step (Barnes-Hut not needed for small graphs) */
+      function step() {
+        // reset forces
+        for (const n of graph.nodes) {
+          n.fx = 0;
+          n.fy = 0;
+        }
+
+        // repulsive (pairwise)
+        const nodes = graph.nodes;
+
+        // integrate velocities -> positions
+        for (const n of nodes) {
+          if (n.fixed) {
+            n.vx = 0;
+            n.vy = 0;
+            continue;
+          }
+          // acceleration = force (mass normalized to 1)
+          n.vx = (n.vx + n.fx * params.dt) * params.friction;
+          n.vy = (n.vy + n.fy * params.dt) * params.friction;
+          n.x += n.vx;
+          n.y += n.vy;
+
+          // keep inside canvas with soft bounds
+          const pad = 30;
+          if (n.x < pad) {
+            n.x = pad;
+            n.vx *= -0.3;
+          }
+          if (n.x > W - pad) {
+            n.x = W - pad;
+            n.vx *= -0.3;
+          }
+          if (n.y < pad) {
+            n.y = pad;
+            n.vy *= -0.3;
+          }
+          if (n.y > H - pad) {
+            n.y = H - pad;
+            n.vy *= -0.3;
+          }
+        }
+      }
+
+      /* drawing */
+      function draw() {
+        ctx.clearRect(0, 0, W, H);
+
+        // draw links
+        ctx.lineWidth = 2;
+        ctx.lineCap = "round";
+        for (const link of graph.links) {
+          const a = link.source,
+            b = link.target;
+          ctx.beginPath();
+          ctx.moveTo(a.x, a.y);
+          ctx.lineTo(b.x, b.y);
+          ctx.strokeStyle = "rgba(150,165,255,0.14)";
+          ctx.stroke();
+        }
+
+        // draw nodes
+        for (const n of graph.nodes) {
+          const r = rateToRadius(n.rate);
+          // halo for larger rates
+          if (n.rate > 18) {
+            ctx.beginPath();
+            ctx.arc(n.x, n.y, r + 8, 0, Math.PI * 2);
+            ctx.fillStyle = "rgba(96,165,250,0.06)";
+            ctx.fill();
+          }
+
+          // node box
+          ctx.beginPath();
+          ctx.roundRect
+            ? ctx.roundRect(n.x - r, n.y - r, r * 2, r * 2, 6)
+            : (function () {
+                const x = n.x - r,
+                  y = n.y - r,
+                  w = r * 2,
+                  h = r * 2,
+                  radius = Math.min(8, r);
+                ctx.moveTo(x + radius, y);
+                ctx.arcTo(x + w, y, x + w, y + h, radius);
+                ctx.arcTo(x + w, y + h, x, y + h, radius);
+                ctx.arcTo(x, y + h, x, y, radius);
+                ctx.arcTo(x, y, x + w, y, radius);
+              })();
+          // fill color depending on isOpen
+          ctx.fillStyle = n.isOpen ? "#2dd4bf" : "#60a5fa";
+          ctx.fill();
+
+          // border
+          ctx.lineWidth = 1.5;
+          ctx.strokeStyle = "rgba(255,255,255,0.06)";
+          ctx.stroke();
+
+          // label: two-letter id centered
+          ctx.fillStyle = "#071025";
+          ctx.font = `${Math.max(10, r * 0.45)}px system-ui, sans-serif`;
+          ctx.textAlign = "center";
+          ctx.textBaseline = "middle";
+          ctx.fillText(n.id, n.x, n.y);
+
+          // small rate badge
+          ctx.fillStyle = "rgba(0,0,0,0.35)";
+          ctx.beginPath();
+          ctx.ellipse(
+            n.x + r * 0.7,
+            n.y - r * 0.7,
+            r * 0.9,
+            r * 0.45,
+            0,
+            0,
+            Math.PI * 2
+          );
+          ctx.fill();
+          ctx.fillStyle = "#e6eef8";
+          ctx.font = "11px system-ui, sans-serif";
+          ctx.fillText(String(n.rate), n.x + r * 0.7, n.y - r * 0.7);
+        }
+
+        // optionally draw labels near nodes
+        if (showLabels) {
+          ctx.fillStyle = "rgba(230,238,248,0.9)";
+          ctx.font = "12px system-ui, sans-serif";
+          ctx.textAlign = "left";
+          for (const n of graph.nodes) {
+            ctx.fillText(
+              `${n.id} (${n.rate})`,
+              n.x + rateToRadius(n.rate) + 8,
+              n.y + 4
+            );
+          }
+        }
+      }
+
+      /* animation loop */
+      function loop() {
+        if (running) step();
+        draw();
+        raf = requestAnimationFrame(loop);
+      }
+      let raf = requestAnimationFrame(loop);
+
+      /* --------------
+         Input Interactions
+         -------------- */
+      const tooltip = document.getElementById("tooltip");
+      let hovered = null;
+      let selected = null;
+      const selectedDiv = document.getElementById("selected");
+
+      function nodeAt(x, y) {
+        for (let i = graph.nodes.length - 1; i >= 0; i--) {
+          const n = graph.nodes[i];
+          const r = rateToRadius(n.rate);
+          const dx = x - n.x,
+            dy = y - n.y;
+          if (dx * dx + dy * dy <= r * r) return n;
+        }
+        return null;
+      }
+
+      /* pointer events */
+      let dragging = null;
+      let dragOffset = { x: 0, y: 0 };
+
+      canvas.addEventListener("mousedown", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left,
+          y = e.clientY - rect.top;
+        const n = nodeAt(x, y);
+        if (n) {
+          dragging = n;
+          n.fixed = true;
+          dragOffset.x = n.x - x;
+          dragOffset.y = n.y - y;
+        }
+      });
+
+      canvas.addEventListener("mousemove", (e) => {
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left,
+          y = e.clientY - rect.top;
+
+        if (dragging) {
+          dragging.x = x + dragOffset.x;
+          dragging.y = y + dragOffset.y;
+          dragging.vx = 0;
+          dragging.vy = 0;
+          return;
+        }
+
+        const n = nodeAt(x, y);
+        if (n !== hovered) {
+          hovered = n;
+          if (hovered) {
+            tooltip.style.display = "block";
+            tooltip.innerHTML = `<strong>${hovered.id}</strong> • rate: ${
+              hovered.rate
+            } • ${hovered.isOpen ? "open" : "closed"}`;
+          } else {
+            tooltip.style.display = "none";
+          }
+        }
+        if (hovered) {
+          tooltip.style.left = e.clientX + "px";
+          tooltip.style.top = e.clientY + "px";
+        }
+      });
+
+      canvas.addEventListener("mouseup", (e) => {
+        if (dragging) {
+          dragging.fixed = false;
+          dragging = null;
+          return;
+        }
+        // click detection
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left,
+          y = e.clientY - rect.top;
+        const n = nodeAt(x, y);
+        if (n) {
+          // toggle isOpen
+          n.isOpen = !n.isOpen;
+          selected = n;
+          selectedDiv.innerHTML = `
+            <div><strong>${n.id}</strong></div>
+            <div>rate: ${n.rate}</div>
+            <div>connections: ${
+              graph.links.filter((l) => l.source === n || l.target === n).length
+            }</div>
+            <div>isOpen: ${n.isOpen}</div>
+          `;
+        } else {
+          selected = null;
+          selectedDiv.innerText = "None";
+        }
+      });
+
+      /* right-click to pin node (toggle fixed) */
+      canvas.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = e.clientX - rect.left,
+          y = e.clientY - rect.top;
+        const n = nodeAt(x, y);
+        if (n) {
+          n.fixed = !n.fixed;
+        }
+      });
+
+      /* controls */
+      document.getElementById("reset").addEventListener("click", () => {
+        for (const n of graph.nodes) {
+          n.x = Math.random() * (W * 0.6) + W * 0.2;
+          n.y = Math.random() * (H * 0.6) + H * 0.2;
+          n.vx = n.vy = 0;
+          n.fixed = false;
+        }
+      });
+
+      document.getElementById("randomize").addEventListener("click", () => {
+        for (const n of graph.nodes) {
+          n.x = Math.random() * W;
+          n.y = Math.random() * H;
+          n.vx = n.vy = 0;
+        }
+      });
+
+      document.getElementById("pause").addEventListener("click", function () {
+        running = !running;
+        this.textContent = running ? "Pause" : "Resume";
+      });
+
+      document.getElementById("labels").addEventListener("click", function () {
+        showLabels = !showLabels;
+        this.textContent = showLabels ? "Hide Labels" : "Show Labels";
+      });
+
+      /* initial nudges to improve spacing slightly */
+      for (let i = 0; i < 80; i++) step();
+
+      /* small utility: draw rounded rect polyfill for browsers without roundRect */
+      if (!ctx.roundRect) {
+        CanvasRenderingContext2D.prototype.roundRect = function (
+          x,
+          y,
+          w,
+          h,
+          r
+        ) {
+          if (typeof r === "number") r = { tl: r, tr: r, br: r, bl: r };
+          else r = Object.assign({ tl: 0, tr: 0, br: 0, bl: 0 }, r);
+          this.beginPath();
+          this.moveTo(x + r.tl, y);
+          this.lineTo(x + w - r.tr, y);
+          this.quadraticCurveTo(x + w, y, x + w, y + r.tr);
+          this.lineTo(x + w, y + h - r.br);
+          this.quadraticCurveTo(x + w, y + h, x + w - r.br, y + h);
+          this.lineTo(x + r.bl, y + h);
+          this.quadraticCurveTo(x, y + h, x, y + h - r.bl);
+          this.lineTo(x, y + r.tl);
+          this.quadraticCurveTo(x, y, x + r.tl, y);
+          this.closePath();
+        };
+      }
+    </script>
+  </body>
+</html>
