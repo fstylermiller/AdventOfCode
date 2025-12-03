@@ -5,11 +5,6 @@ const raw = fs.readFileSync(__dirname + "/../part/input.txt").toString();
 const stringBanks = raw.split("\n");
 const banks = stringBanks.map((row) => row.split("").map((str) => new Number(str)));
 
-// const calculateJolts = (biggest, distance) => {
-//   // find the biggest digit that is n distance from the end
-//   return calculateJolts(newBiggest, distance);
-// }
-
 let totalJoltz = 0;
 
 banks.forEach(row => {
