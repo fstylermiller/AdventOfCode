@@ -1,6 +1,6 @@
 const fs = require("fs");
 
-const raw = fs.readFileSync(__dirname + "/test-input.txt").toString();
+const raw = fs.readFileSync(__dirname + "/input.txt").toString();
 
 const doCephalopodHomework = () => {
   const isAddition = {
