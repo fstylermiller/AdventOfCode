@@ -25,20 +25,3 @@ ingredients.forEach(ingredient => {
 
 
 console.log(numFresh);
-
-// const findFreshies = () => {
-//   const mergedRanges = [];
-
-//   ranges.map((range) => {
-//     const [lowerBound, upperBound] = range;
-
-//     ranges.forEach((compareRange) => {
-//       const [compareLower, compareUpper] = compareRange;
-      
-//       if (lowerBound >= compareRange[0] && lowerBound <= compareRange[1]) {
-//         mergedRanges.push([compareLower])
-//       }
-//     });
-    
-//   });
-// }
