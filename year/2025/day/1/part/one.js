@@ -2,7 +2,12 @@ const fs = require("fs");
 
 const raw = fs.readFileSync(__dirname + "/../part/input.txt").toString();
 
-const sequence = raw.split("\n").map((row) => ({ direction: row.slice(0, 1), distance: new Number(row.slice(1)) }));
+const sequence = raw
+  .split("\n")
+  .map((row) => ({
+    direction: row.slice(0, 1),
+    distance: new Number(row.slice(1)),
+  }));
 
 let result = 0;
 let position = 50;
@@ -10,16 +15,16 @@ let position = 50;
 sequence.forEach((command) => {
   const { direction, distance } = command;
   const toAdd = direction === "L" ? -1 : 1;
-  
+
   for (let i = 0; i < distance; i++) {
     position += toAdd;
 
     if (position > 99) {
-      position = 0
+      position = 0;
     }
 
     if (position < 0) {
-      position = 99
+      position = 99;
     }
 
     if (position === 0) {
@@ -50,8 +55,6 @@ console.log(result);
 //     currentPosition = newPosition;
 //   }
 // });
-
-
 
 console.log(traveledPastZero);
 console.log(numberOfZeros);
