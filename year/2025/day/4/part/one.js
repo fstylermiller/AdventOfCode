@@ -14,46 +14,46 @@ const isAccessible = (x, y) => {
   let surroundingCount = 0;
 
   // top left
-  if (indexMap?.[grid?.[y - 1]?.[x - 1]]) {
+  if (!indexMap?.[grid?.[y - 1]?.[x - 1]]) {
     surroundingCount++;
   }
   // top
-  if (indexMap?.[grid?.[y - 1]?.[x]]) {
+  if (!indexMap?.[grid?.[y - 1]?.[x]]) {
     surroundingCount++;
   }
   // top right
-  if (indexMap?.[grid?.[y - 1]?.[x + 1]]) {
+  if (!indexMap?.[grid?.[y - 1]?.[x + 1]]) {
     surroundingCount++;
   }
   // left
-  if (indexMap?.[grid?.[y]?.[x - 1]]) {
+  if (!indexMap?.[grid?.[y]?.[x - 1]]) {
     surroundingCount++;
   }
   // right
-  if (indexMap?.[grid?.[y]?.[x + 1]]) {
+  if (!indexMap?.[grid?.[y]?.[x + 1]]) {
     surroundingCount++;
   }
   // bottom left
-  if (indexMap?.[grid?.[y + 1]?.[x - 1]]) {
+  if (!indexMap?.[grid?.[y + 1]?.[x - 1]]) {
     surroundingCount++;
   }
   // bottom
-  if (indexMap?.[grid?.[y + 1]?.[x]]) {
+  if (!indexMap?.[grid?.[y + 1]?.[x]]) {
     surroundingCount++;
   }
   // bottom right
-  if (indexMap?.[grid?.[y + 1]?.[x + 1]]) {
+  if (!indexMap?.[grid?.[y + 1]?.[x + 1]]) {
     surroundingCount++;
   }
 
-  return surroundingCount < 4;
+  return surroundingCount > 4;
 };
 
 const findAccessibleRolls = () => {
   let count = 0;
   grid.forEach((row, y) => {
     row.forEach((col, x) => {
-      if (isAccessible(x, y)) {
+      if (grid[y][x] === "@" && isAccessible(x, y)) {
         count++;
       }
     });
