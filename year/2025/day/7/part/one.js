@@ -1,8 +1,9 @@
 const fs = require("fs");
 
-const raw = fs.readFileSync(__dirname + "/input.txt").toString();
+const raw = fs.readFileSync(__dirname + "/test-input.txt").toString();
 
 const splitterConfiguration = raw.split("\n").map((row) => row.split(""));
+const splitterVisualization = JSON.parse(JSON.stringify(splitterConfiguration));
 const startingX = splitterConfiguration[0].indexOf("S");
 
 const splitterTree = {
@@ -47,6 +48,8 @@ const splitBeam = (currentPosition, direction) => {
           splitBeam({ x: xPosition, y: beamDepth }, 1);
         }
       }
+    } else {
+      splitterVisualization[beamDepth][xPosition] = "|";
     }
 
     beamDepth++;
@@ -56,5 +59,12 @@ const splitBeam = (currentPosition, direction) => {
 console.time("execution time");
 splitBeam({ x: startingX, y: 0 }, 0);
 console.timeEnd("execution time");
+
+const fileData = splitterVisualization.reduce(
+  (acc, row) => acc + row.join(" ") + "\n",
+  ""
+);
+
+fs.writeFileSync("./visualization.txt", fileData);
 
 console.log(`Beam split ${Object.keys(splitterTree).length - 1} times`);
